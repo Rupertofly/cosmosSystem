@@ -1,0 +1,20 @@
+{
+  "name": "cosmos-system",
+  "version": "0.0.5",
+  "description": "System elements of cosmos system",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rupertofly/cosmosSystem.git"
+  },
+  "author": "rupert moore",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Rupertofly/cosmosSystem/issues"
+  },
+  "homepage": "https://github.com/Rupertofly/cosmosSystem#readme"
+}
