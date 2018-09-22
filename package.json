@@ -16,5 +16,9 @@
   "bugs": {
     "url": "https://github.com/Rupertofly/cosmosSystem/issues"
   },
-  "homepage": "https://github.com/Rupertofly/cosmosSystem#readme"
+  "homepage": "https://github.com/Rupertofly/cosmosSystem#readme",
+  "dependencies": {
+    "@types/express": "^4.16.0",
+    "express": "^4.16.3"
+  }
 }
