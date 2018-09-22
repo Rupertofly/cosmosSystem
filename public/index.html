@@ -1,12 +1,27 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Test</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
+
 <body>
     Hey Cutie
+    <input type="text" name="msg" id="message" value="boop"><input id="send" type="button" value="Send">
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        localStorage.debug = '*';
+        var socket = io();
+        document.getElementById("send").addEventListener('click', (el, ev) => {
+            const text = document.getElementById('message');
+            socket.emit('msg', text.value);
+            text.value = ''
+        });
+    </script>
+
 </body>
+
 </html>

@@ -7,12 +7,5 @@ const App_1 = __importDefault(require("./classes/App"));
 console.log(`\
 Started\
 `);
-const port = 80;
-console.log(__dirname);
-App_1.default.listen(port, (err) => {
-    if (err) {
-        console.log(err);
-    }
-    return console.log(`server is listening on ${port}`);
-});
+const myApp = new App_1.default();
 //# sourceMappingURL=index.js.map
