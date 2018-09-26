@@ -1,3 +1,5 @@
+/*
+
 import Expr from 'express';
 import Sock from 'socket.io';
 
@@ -38,4 +40,4 @@ class App {
         this.sockServe( serve );
     }
 }
-export default App;
+export default App;*/

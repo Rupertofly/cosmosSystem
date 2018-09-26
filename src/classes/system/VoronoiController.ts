@@ -1,5 +1,5 @@
 import { polygonCentroid } from 'd3-polygon';
-import Vor from 'd3-voronoi';
+import * as Vor from 'd3-voronoi';
 import _ from 'lodash';
 import VoronoiCell from './VoronoiCell';
 
@@ -16,6 +16,8 @@ export default class VoronoiController {
     ) {
         r = r || 16;
         // assign everything
+        const vv = Vor;
+        console.log( Vor );
         this.vFunc = Vor.voronoi<VoronoiCell>()
             .x( v => v.x )
             .y( v => v.y )
@@ -40,5 +42,12 @@ export default class VoronoiController {
         this.polygons = this.vFunc.polygons(
             this.cells
         );
+        const dg = this.vFunc( this.cells ).links();
+        dg.map( l => {
+            l.source.neighbours.push( l.target );
+            l.target.neighbours.push( l.source );
+            
+        } )
+        console.log( this.cells );
     }
 }
