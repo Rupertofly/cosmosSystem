@@ -63,11 +63,11 @@ export default class SystemController {
                 }
                 if (
                     thisCell.type !== 2 &&
-                    costSoFar[thisCell.i] < thisCell.minDistToSettlement
+                    costSoFar[thisCell.i ] < thisCell.minDistToSettlement
                 ) {
                     thisCell.minDistToSettlement = costSoFar[thisCell.i];
                     thisCell.closestSettlement = s;
-                    thisCell.leadCommunity = s.mComunity;
+                    thisCell.leadCommunity = s.community;
                 }
                 
                 thisCell.neighbours.map( next => {

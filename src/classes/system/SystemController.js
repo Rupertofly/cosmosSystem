@@ -46,7 +46,7 @@ class SystemController {
                         costSoFar[thisCell.i] < thisCell.minDistToSettlement) {
                         thisCell.minDistToSettlement = costSoFar[thisCell.i];
                         thisCell.closestSettlement = s;
-                        thisCell.leadCommunity = s.mComunity;
+                        thisCell.leadCommunity = s.community;
                     }
                     thisCell.neighbours.map(next => {
                         const thisDist = costSoFar[thisCell.i] + cost(next);
