@@ -7,6 +7,11 @@ class Settlement {
         this.system = system;
         this.community = community;
         this.options = options;
+        this.spoons = 5;
+    }
+    update() { }
+    refresh() {
+        this.spoons = this.options.disco;
     }
 }
 exports.default = Settlement;
