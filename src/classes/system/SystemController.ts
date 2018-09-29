@@ -12,6 +12,7 @@ export default class SystemController {
     }
     public vor: VoronoiController;
     public settlements: Settlement[];
+    public time: number = 0;
     private __age: number;
     private __running: boolean;
 

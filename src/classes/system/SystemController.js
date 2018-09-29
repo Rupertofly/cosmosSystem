@@ -10,6 +10,7 @@ const VoronoiController_1 = __importDefault(require("./VoronoiController"));
 // This is the system controller
 class SystemController {
     constructor() {
+        this.time = 0;
         this.pause = () => {
             this.__running = false;
         };
