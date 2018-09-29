@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
@@ -6,16 +9,26 @@ var __importStar = (this && this.__importStar) || function (mod) {
     result["default"] = mod;
     return result;
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
+const a_star_1 = __importDefault(require("a-star"));
 const d3_polygon_1 = require("d3-polygon");
 const Vor = __importStar(require("d3-voronoi"));
 const lodash_1 = __importDefault(require("lodash"));
 const VoronoiCell_1 = __importDefault(require("./VoronoiCell"));
 class VoronoiController {
     constructor(w, h, r) {
+        this.cost = (cell) => {
+            switch (cell.type) {
+                case 0:
+                    return 1;
+                case 1:
+                    return 0.2;
+                case 2:
+                    return 5;
+                default:
+                    return 1;
+            }
+        };
         r = r || 16;
         // assign everything
         const vv = Vor;
@@ -46,6 +59,16 @@ class VoronoiController {
         return this.cells.reduce((p, c) => {
             return p.minDistToSettlement >= c.minDistToSettlement ? p : c;
         });
+    }
+    returnPath(start, finish) {
+        return a_star_1.default({
+            start,
+            isEnd: n => n === finish,
+            neighbor: n => n.neighbours,
+            distance: (a, b) => this.cost(b),
+            heuristic: a => Math.abs(a.x - finish.x) + Math.abs(a.y - finish.y),
+            hash: n => `n${n.i}x`
+        }).path;
     }
 }
 exports.default = VoronoiController;

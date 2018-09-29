@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const lodash_1 = __importDefault(require("lodash"));
 const tinyqueue_1 = __importDefault(require("tinyqueue"));
+const util_1 = require("util");
 const VoronoiController_1 = __importDefault(require("./VoronoiController"));
 // This is the system controller
 class SystemController {
@@ -19,10 +20,14 @@ class SystemController {
         this.updateRealms = () => {
             const cost = (cell) => {
                 switch (cell.type) {
-                    case 0: return 1;
-                    case 1: return 0.2;
-                    case 2: return 5;
-                    default: return 1;
+                    case 0:
+                        return 1;
+                    case 1:
+                        return 0.2;
+                    case 2:
+                        return 5;
+                    default:
+                        return 1;
                 }
             };
             this.settlements.map(s => {
@@ -33,8 +38,10 @@ class SystemController {
                 const done = [];
                 while (frontier.length) {
                     const thisCell = frontier.pop()[0];
-                    if (lodash_1.default.includes(done, thisCell))
+                    if (lodash_1.default.includes(done, thisCell) &&
+                        costSoFar[thisCell.i] >= thisCell.minDistToSettlement) {
                         continue;
+                    }
                     if (thisCell.type !== 2 &&
                         costSoFar[thisCell.i] < thisCell.minDistToSettlement) {
                         thisCell.minDistToSettlement = costSoFar[thisCell.i];
@@ -43,7 +50,9 @@ class SystemController {
                     }
                     thisCell.neighbours.map(next => {
                         const thisDist = costSoFar[thisCell.i] + cost(next);
-                        costSoFar[next.i] = thisDist;
+                        if (util_1.isNullOrUndefined(costSoFar[next.i]))
+                            costSoFar[next.i] = 1000;
+                        costSoFar[next.i] = lodash_1.default.min([thisDist, costSoFar[next.i]]);
                         frontier.push([next, thisDist]);
                     });
                     done.push(thisCell);
