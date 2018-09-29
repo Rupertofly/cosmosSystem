@@ -1,6 +1,6 @@
 import Vor from 'd3-voronoi';
+import Settlement from './settlement'
 
-declare interface Settlement {}
 declare interface Road {}
 declare interface Community {}
 export default class VoronoiCell {

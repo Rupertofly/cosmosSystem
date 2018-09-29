@@ -41,7 +41,11 @@ class VoronoiController {
             l.source.neighbours.push(l.target);
             l.target.neighbours.push(l.source);
         });
-        console.log(this.cells);
+    }
+    getFarCell() {
+        return this.cells.reduce((p, c) => {
+            return p.minDistToSettlement >= c.minDistToSettlement ? p : c;
+        });
     }
 }
 exports.default = VoronoiController;
