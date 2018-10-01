@@ -13,6 +13,7 @@ export default class SystemController {
     public vor: VoronoiController;
     public settlements: Settlement[];
     public time: number = 0;
+    public day: number = 0;
     private __age: number;
     private __running: boolean;
 
@@ -81,9 +82,18 @@ export default class SystemController {
             }
         } );
     };
-    private __tick = () => {
+    private __tick() {
         if ( this.__running ) setTimeout( this.__tick, 84 );
         // console.log( `Ping! it's ${this.__age}` );
+        if ( this.time === 239 ) { 
+            this.__newDay();
+        }
         this.__age++;
+        
+        this.time++;
+        this.time = this.time % 240;
     };
+    private __newDay() {
+
+    }
 }

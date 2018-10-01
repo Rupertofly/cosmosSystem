@@ -57,6 +57,7 @@ export default class Settlement {
         public options: OptionTraits
     ) {
         this.strength = options.res;
+        this.spoons = _.floor( ( 1-system.time/240 )*options.nrg )
     }
 
     public update() {
@@ -85,13 +86,17 @@ export default class Settlement {
         }
         // Act or present
         if ( Math.random() < 0.2 ) {
-            this.generateActor();
+           this.generateActor();
             return;
         }
         // conversation of exhibition
-        if ( Math.random() < this.options.perf )
+        if ( Math.random() < this.options.perf ) {
+           this.sendConversation();
+            return;
+        }
+        this.createExhibition();
     }
-    private sendConversation();
-    private createExhibition();
-    private generateActor();
+    private sendConversation() {};
+    private createExhibition() {};
+    private generateActor() {};
 }

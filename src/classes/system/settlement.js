@@ -55,12 +55,14 @@ class Settlement {
         }
         // Act or present
         if (Math.random() < 0.2) {
-            this.generateActor();
+            // this.generateActor();
             return;
         }
         // conversation of exhibition
-        if (Math.random() < this.options.perf)
-            ;
+        if (Math.random() < this.options.perf) {
+            // this.sendConversation();
+            return;
+        }
     }
 }
 exports.default = Settlement;
