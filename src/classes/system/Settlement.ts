@@ -109,7 +109,9 @@ export default class Settlement {
         }
         this.createExhibition();
     }
-    private sendConversation() {}
+    private sendConversation() {
+        
+    }
     private createExhibition() {}
     private generateActor() {}
 }

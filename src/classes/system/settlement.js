@@ -77,7 +77,8 @@ class Settlement {
         }
         this.createExhibition();
     }
-    sendConversation() { }
+    sendConversation() {
+    }
     createExhibition() { }
     generateActor() { }
 }
