@@ -14,6 +14,7 @@ export default class SystemController {
     public settlements: Settlement[];
     public time: number = 0;
     public day: number = 0;
+    private __distances: Array<{ dist: number; settlement: Settlement }>;
     private __age: number;
     private __running: boolean;
 
@@ -23,6 +24,8 @@ export default class SystemController {
         this.__tick();
         this.vor = new VoronoiController( 1200, 800 );
         this.settlements = [];
+        this.__distances = [];
+        this.updateRealms();
     }
     public pause = () => {
         this.__running = false;
@@ -65,35 +68,53 @@ export default class SystemController {
                 }
                 if (
                     thisCell.type !== 2 &&
-                    costSoFar[thisCell.i ] < thisCell.minDistToSettlement
+                    costSoFar[thisCell.i] < thisCell.minDistToSettlement
                 ) {
                     thisCell.minDistToSettlement = costSoFar[thisCell.i];
                     thisCell.closestSettlement = s;
                     thisCell.leadCommunity = s.community;
                 }
-                
+
                 thisCell.neighbours.map( next => {
                     const thisDist = costSoFar[thisCell.i] + cost( next );
-                    if ( isNullOrUndefined( costSoFar[next.i] ) ) costSoFar[next.i] = 1000;
-                    costSoFar[next.i] = _.min( [ thisDist, costSoFar[next.i] ] ) as number;
+                    if ( isNullOrUndefined( costSoFar[next.i] ) ) {
+                        costSoFar[next.i] = 1000;
+                    }
+                    costSoFar[next.i] = _.min( [
+                        thisDist,
+                        costSoFar[next.i]
+                    ] ) as number;
                     frontier.push( [ next, thisDist ] );
                 } );
                 done.push( thisCell );
             }
         } );
+        this.__updateDist();
     };
+    private __updateDist() {
+        this.settlements.map( s => {
+            this.settlements.map( f => {
+                if ( s === f ) return;
+                this.__distances[this.settlements.indexOf( s )] = {
+                    dist: this.vor.returnLength( s.cell, f.cell ),
+                    settlement: f
+                };
+            } );
+        } );
+    }
+    get dists() {
+        return this.__distances;
+    }
     private __tick() {
         if ( this.__running ) setTimeout( this.__tick, 84 );
         // console.log( `Ping! it's ${this.__age}` );
-        if ( this.time === 239 ) { 
+        if ( this.time === 239 ) {
             this.__newDay();
         }
         this.__age++;
-        
+
         this.time++;
         this.time = this.time % 240;
-    };
-    private __newDay() {
-
     }
+    private __newDay() {}
 }

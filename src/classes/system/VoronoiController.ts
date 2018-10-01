@@ -50,6 +50,9 @@ export default class VoronoiController {
             hash: n => `n${n.i}x`
         } ).path;
     }
+    public returnLength( start: VoronoiCell, finish: VoronoiCell ) {
+        return this.returnPath( start, finish ).length * 30;
+    }
     private cost = ( cell: VoronoiCell ) => {
         switch ( cell.type ) {
             case 0:

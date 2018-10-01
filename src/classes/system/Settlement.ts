@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import Conversation from './settlementAspects/Conversation'
 import SystemController from './SystemController';
 import VoronoiCell from './VoronoiCell';
 
@@ -27,6 +28,12 @@ interface OptionTraits {
     /** Discursiveness: how willing a settlement is to engage those that are different to it */
     disco: number;
 }
+class Memory {
+    constructor(
+        public settlement: Settlement,
+        public type: 'Orange' | 'Green' | 'Purple'
+    ) {}
+}
 export default class Settlement {
     public readonly Exhibits = {
         Orange: 1,
@@ -49,6 +56,8 @@ export default class Settlement {
     public strength = 3;
     private spoons = 5;
     private timeSinceSpoon = 0;
+    private memories: Memory[] = [];
+    private history: Memory[] = [];
     constructor(
         public cell: VoronoiCell,
         public id: string,
@@ -57,7 +66,7 @@ export default class Settlement {
         public options: OptionTraits
     ) {
         this.strength = options.res;
-        this.spoons = _.floor( ( 1-system.time/240 )*options.nrg )
+        this.spoons = _.floor( ( 1 - system.time / 240 ) * options.nrg );
     }
 
     public update() {
@@ -77,6 +86,10 @@ export default class Settlement {
     public refresh() {
         this.spoons = this.options.nrg;
     }
+    public receiveConversation( conv: Conversation ) {
+        this.memories.push( new Memory( conv.source, conv.type ) );
+
+    }
     private useSpoon() {
         this.spoons--;
         // chance for repair
@@ -86,17 +99,17 @@ export default class Settlement {
         }
         // Act or present
         if ( Math.random() < 0.2 ) {
-           this.generateActor();
+            this.generateActor();
             return;
         }
         // conversation of exhibition
         if ( Math.random() < this.options.perf ) {
-           this.sendConversation();
+            this.sendConversation();
             return;
         }
         this.createExhibition();
     }
-    private sendConversation() {};
-    private createExhibition() {};
-    private generateActor() {};
+    private sendConversation() {}
+    private createExhibition() {}
+    private generateActor() {}
 }

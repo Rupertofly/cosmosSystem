@@ -4,6 +4,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const lodash_1 = __importDefault(require("lodash"));
+class Memory {
+    constructor(settlement, type) {
+        this.settlement = settlement;
+        this.type = type;
+    }
+}
 class Settlement {
     constructor(cell, id, system, community, options) {
         this.cell = cell;
@@ -33,7 +39,10 @@ class Settlement {
         this.strength = 3;
         this.spoons = 5;
         this.timeSinceSpoon = 0;
+        this.memories = [];
+        this.history = [];
         this.strength = options.res;
+        this.spoons = lodash_1.default.floor((1 - system.time / 240) * options.nrg);
     }
     update() {
         if (lodash_1.default.random(0, lodash_1.default.floor(240 - this.system.time / this.spoons + 1) + 1, false) < this.timeSinceSpoon &&
@@ -46,6 +55,9 @@ class Settlement {
     refresh() {
         this.spoons = this.options.nrg;
     }
+    receiveConversation(conv) {
+        this.memories.push(new Memory(conv.source, conv.type));
+    }
     useSpoon() {
         this.spoons--;
         // chance for repair
@@ -55,15 +67,19 @@ class Settlement {
         }
         // Act or present
         if (Math.random() < 0.2) {
-            // this.generateActor();
+            this.generateActor();
             return;
         }
         // conversation of exhibition
         if (Math.random() < this.options.perf) {
-            // this.sendConversation();
+            this.sendConversation();
             return;
         }
+        this.createExhibition();
     }
+    sendConversation() { }
+    createExhibition() { }
+    generateActor() { }
 }
 exports.default = Settlement;
 //# sourceMappingURL=settlement.js.map

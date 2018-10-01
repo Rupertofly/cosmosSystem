@@ -70,6 +70,9 @@ class VoronoiController {
             hash: n => `n${n.i}x`
         }).path;
     }
+    returnLength(start, finish) {
+        return this.returnPath(start, finish).length * 30;
+    }
 }
 exports.default = VoronoiController;
 //# sourceMappingURL=VoronoiController.js.map

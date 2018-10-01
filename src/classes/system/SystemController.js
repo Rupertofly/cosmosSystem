@@ -11,6 +11,7 @@ const VoronoiController_1 = __importDefault(require("./VoronoiController"));
 class SystemController {
     constructor() {
         this.time = 0;
+        this.day = 0;
         this.pause = () => {
             this.__running = false;
         };
@@ -51,30 +52,58 @@ class SystemController {
                     }
                     thisCell.neighbours.map(next => {
                         const thisDist = costSoFar[thisCell.i] + cost(next);
-                        if (util_1.isNullOrUndefined(costSoFar[next.i]))
+                        if (util_1.isNullOrUndefined(costSoFar[next.i])) {
                             costSoFar[next.i] = 1000;
-                        costSoFar[next.i] = lodash_1.default.min([thisDist, costSoFar[next.i]]);
+                        }
+                        costSoFar[next.i] = lodash_1.default.min([
+                            thisDist,
+                            costSoFar[next.i]
+                        ]);
                         frontier.push([next, thisDist]);
                     });
                     done.push(thisCell);
                 }
             });
-        };
-        this.__tick = () => {
-            if (this.__running)
-                setTimeout(this.__tick, 84);
-            // console.log( `Ping! it's ${this.__age}` );
-            this.__age++;
+            this.__updateDist();
         };
         this.__age = 0;
         this.__running = true;
         this.__tick();
         this.vor = new VoronoiController_1.default(1200, 800);
         this.settlements = [];
+        this.__distances = [];
+        this.updateRealms();
     }
     get age() {
         return this.__age;
     }
+    __updateDist() {
+        this.settlements.map(s => {
+            this.settlements.map(f => {
+                if (s === f)
+                    return;
+                this.__distances[this.settlements.indexOf(s)] = {
+                    dist: this.vor.returnLength(s.cell, f.cell),
+                    settlement: f
+                };
+            });
+        });
+    }
+    get dists() {
+        return this.__distances;
+    }
+    __tick() {
+        if (this.__running)
+            setTimeout(this.__tick, 84);
+        // console.log( `Ping! it's ${this.__age}` );
+        if (this.time === 239) {
+            this.__newDay();
+        }
+        this.__age++;
+        this.time++;
+        this.time = this.time % 240;
+    }
+    __newDay() { }
 }
 exports.default = SystemController;
 //# sourceMappingURL=SystemController.js.map
