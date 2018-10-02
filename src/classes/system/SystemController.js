@@ -6,12 +6,31 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const lodash_1 = __importDefault(require("lodash"));
 const tinyqueue_1 = __importDefault(require("tinyqueue"));
 const util_1 = require("util");
+const sorting_json_1 = __importDefault(require("../../sorting.json"));
+const settlement_1 = __importDefault(require("./settlement"));
+const Conversation_1 = __importDefault(require("./settlementAspects/Conversation"));
 const VoronoiController_1 = __importDefault(require("./VoronoiController"));
-// This is the system controller
+var Cultures;
+(function (Cultures) {
+    Cultures["ORG"] = "Orange";
+    Cultures["GRN"] = "Green";
+    Cultures["PPL"] = "Purple";
+})(Cultures = exports.Cultures || (exports.Cultures = {}));
+var SettlementCatEnum;
+(function (SettlementCatEnum) {
+    SettlementCatEnum[SettlementCatEnum["hobbies"] = 0] = "hobbies";
+    SettlementCatEnum[SettlementCatEnum["personality"] = 1] = "personality";
+    SettlementCatEnum[SettlementCatEnum["passion"] = 2] = "passion";
+    SettlementCatEnum[SettlementCatEnum["traits"] = 3] = "traits";
+    SettlementCatEnum[SettlementCatEnum["skills"] = 4] = "skills";
+    SettlementCatEnum[SettlementCatEnum["entertainment"] = 5] = "entertainment";
+})(SettlementCatEnum || (SettlementCatEnum = {}));
 class SystemController {
     constructor() {
+        this.roads = [];
         this.time = 0;
         this.day = 0;
+        this.fameList = {};
         this.pause = () => {
             this.__running = false;
         };
@@ -72,10 +91,59 @@ class SystemController {
         this.vor = new VoronoiController_1.default(1200, 800);
         this.settlements = [];
         this.__distances = [];
+        this.conversations = [];
         this.updateRealms();
     }
     get age() {
         return this.__age;
+    }
+    get dists() {
+        return this.__distances;
+    }
+    calculateFame() {
+        const frecensy = (memories) => {
+            const decayRate = Math.LN2 / 800;
+            return lodash_1.default.sum(memories.map(mem => Math.pow(Math.E, (-decayRate * (this.time - mem.time)))));
+        };
+        for (const member in this.fameList)
+            delete this.fameList[member];
+        this.settlements.map(st => {
+            this.fameList[st.id] = frecensy(st.memories);
+        });
+    }
+    createConversation(source, dest, type) {
+        this.conversations.push(new Conversation_1.default(type, source, dest, this));
+    }
+    addSettlement(opts) {
+        // sort options
+        const options = {
+            perf: 0.5,
+            extro: 0.5,
+            conv: 0.5,
+            fame: 0.5,
+            nrg: 5,
+            res: 3,
+            form: 0.5,
+            disco: 0.5
+        };
+        // tslint:disable-next-line:forin
+        for (const trait in options) {
+            opts.map((cat, i) => {
+                const catInfo = sorting_json_1.default[SettlementCatEnum[i]];
+                options[trait] += catInfo[cat].traits[trait];
+            });
+            const t = options[trait];
+            if (trait !== 'nrg' || 'res') {
+                options[trait] = t > 0.9 ? 0.9 + (t - 0.9) / 5 : t < 0.1 ? 0.1 - (t + 1) / 10 : t;
+            }
+        }
+        let foundHash = false;
+        let hash = '05';
+        while (!foundHash) {
+            hash = lodash_1.default.random(1, 250, false).toString(16);
+            foundHash = !lodash_1.default.includes(this.settlements.map(c => c.id), hash);
+        }
+        this.settlements.push(new settlement_1.default(this.vor.getFarCell(), hash, this, Cultures[lodash_1.default.random(2)], options));
     }
     __updateDist() {
         this.settlements.map(s => {
@@ -88,9 +156,6 @@ class SystemController {
                 };
             });
         });
-    }
-    get dists() {
-        return this.__distances;
     }
     __tick() {
         if (this.__running)

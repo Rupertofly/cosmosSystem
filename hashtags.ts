@@ -1,4 +1,4 @@
-let h = require( './hashtags.json' )
+let h = require( './hashtags.json' );
 const ht = [
     {
         tag: '#makersgonnamake',

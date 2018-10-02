@@ -2,6 +2,21 @@ declare module 'tinyqueue' {
     const queue: any;
     export default queue;
 }
+declare interface Traits {
+    [trait: string]: number;
+    perf: number;
+    extro: number;
+    conv: number;
+    fame: number;
+    nrg: number;
+    res: number;
+    form: number;
+    disco: number
+}
+declare module "*sorting.json" {
+    const value: {[cat: string]: [{tag: string, traits: Traits}]};
+    export default value;
+}
 declare module 'a-star' {
     interface Options<T> {
         start: T;

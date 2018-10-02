@@ -1,7 +1,13 @@
 import _ from 'lodash';
-import Conversation from './settlementAspects/Conversation'
-import SystemController from './SystemController';
+import Road from './Road';
+import Conversation from './settlementAspects/Conversation';
+import SystemController, { Cultures } from './SystemController';
 import VoronoiCell from './VoronoiCell';
+enum doIt {
+    DO,
+    DONT,
+    MEH
+}
 
 declare interface Community {}
 
@@ -10,7 +16,7 @@ declare interface Community {}
  *
  * @interface OptionTraits
  */
-interface OptionTraits {
+export interface OptionTraits {
     /** Performativity: ratio of exhibition to conversation */
     perf: number;
     /** Extroverion: converse with close or with far */
@@ -28,10 +34,11 @@ interface OptionTraits {
     /** Discursiveness: how willing a settlement is to engage those that are different to it */
     disco: number;
 }
-class Memory {
+export class Memory {
     constructor(
         public settlement: Settlement,
-        public type: 'Orange' | 'Green' | 'Purple'
+        public type: Cultures,
+        public time: number
     ) {}
 }
 export default class Settlement {
@@ -48,27 +55,29 @@ export default class Settlement {
             this.Green = _.floor( ( this.Green / size ) * 10 );
             this.Purple = _.floor( ( this.Purple / size ) * 10 );
         },
-        addExhibit( col: 'Orange' | 'Green' | 'Purple' ) {
+        addExhibit( col: Cultures ) {
             if ( this.getLength() > 30 ) this.doNormalise();
             this[col]++;
         }
     };
     public strength = 3;
+    public memories: Memory[] = [];
+    public roads: Road[];
     private spoons = 5;
     private timeSinceSpoon = 0;
-    private memories: Memory[] = [];
     private history: Memory[] = [];
     constructor(
         public cell: VoronoiCell,
         public id: string,
         public system: SystemController,
-        public community: Community,
+        public community: Cultures,
         public options: OptionTraits
     ) {
         this.strength = options.res;
         this.spoons = _.floor( ( 1 - system.time / 240 ) * options.nrg );
+        system.fameList[this.id] = -1;
+        this.roads = [];
     }
-
     public update() {
         if (
             _.random(
@@ -87,11 +96,16 @@ export default class Settlement {
         this.spoons = this.options.nrg;
     }
     public receiveConversation( conv: Conversation ) {
-        this.memories.push( new Memory( conv.source, conv.type ) );
-
+        this.memories.push(
+            new Memory( conv.source, conv.type, this.system.time )
+        );
+        _.remove( this.system.conversations, c => c === conv );
+    }
+    private getFame() {
+        return this.system.fameList[this.id];
     }
     private useSpoon() {
-        this.spoons--;
+        /* this.spoons--;
         // chance for repair
         if ( this.strength < this.options.res && Math.random() < 0.8 ) {
             this.strength++;
@@ -107,11 +121,136 @@ export default class Settlement {
             this.sendConversation();
             return;
         }
-        this.createExhibition();
+        this.createExhibition(); */
+        this.sendConversation();
     }
     private sendConversation() {
-        
+        const hotOrNot = _.mean( _.values( this.system.fameList ) );
+        let doHot =
+            Math.random() < this.options.fame
+                ? doIt.DO
+                : Math.random() > this.options.fame
+                    ? doIt.DONT
+                    : doIt.MEH;
+
+        const nearOrFar = _.mean( this.roads.map( r => r.length ) );
+        let doFar =
+            Math.random() < this.options.extro - 0.05
+                ? doIt.DO
+                : Math.random() > this.options.extro + 0.05
+                    ? doIt.DONT
+                    : doIt.MEH;
+
+        let doDiff =
+            Math.random() < this.options.disco
+                ? doIt.DO
+                : Math.random() > this.options.extro
+                    ? doIt.DONT
+                    : doIt.MEH;
+        const Candidates = () => {
+            return this.system.settlements.filter( option => {
+                switch ( doHot ) {
+                    case 0:
+                        if ( option.getFame() < hotOrNot ) return false;
+                        break;
+                    case 1:
+                        if ( option.getFame() > hotOrNot ) return false;
+                        break;
+                    default:
+                        break;
+                }
+                switch ( doFar ) {
+                    case 0:
+                        if (
+                            this.system.vor.returnLength(
+                                this.cell,
+                                option.cell
+                            ) < hotOrNot
+                        ) {
+                            return false;
+                        }
+                        break;
+                    case 1:
+                        if (
+                            this.system.vor.returnLength(
+                                this.cell,
+                                option.cell
+                            ) > hotOrNot
+                        ) {
+                            return false;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                switch ( doDiff ) {
+                    case 0:
+                        if ( option.community !== this.community ) return false;
+                        break;
+                    case 1:
+                        if ( option.community === this.community ) return false;
+                        break;
+                    default:
+                        break;
+                }
+            } );
+        };
+        let c = Candidates();
+        if ( !c.length ) {
+            doDiff = doIt.MEH;
+            c = Candidates();
+            if ( !c.length ) {
+                doHot = doIt.MEH;
+                c = Candidates();
+                if ( !c.length ) {
+                    doFar = doIt.MEH;
+                    c = Candidates();
+                }
+            }
+        }
+        const choice = _.sample( c ) as Settlement;
+        const cType =
+            Math.random() > 0.5
+                ? this.community
+                : this.community !== choice.community &&
+                  Math.random() < this.options.form
+                    ? this.community
+                    : _.sample(
+                          [ Cultures.GRN, Cultures.PPL, Cultures.ORG ].splice(
+                              [ Cultures.GRN, Cultures.PPL, Cultures.ORG ].indexOf(
+                                  this.community
+                              ),
+                              1
+                          )
+                    ) as Cultures.GRN| Cultures.PPL| Cultures.ORG ;
+        this.system.createConversation( this, choice, cType as Cultures );
     }
     private createExhibition() {}
     private generateActor() {}
+
+    private updateCommunity() {
+        const decayRate = Math.LN2 / 240;
+        const orange = this.memories
+            .filter( m => m.type === Cultures.ORG )
+            .map( v => Math.E ** ( -decayRate * ( this.system.time - v.time ) ) )
+            .reduce( ( a, b ) => a + b );
+        const green = this.memories
+            .filter( m => m.type === Cultures.GRN )
+            .map( v => Math.E ** ( -decayRate * ( this.system.time - v.time ) ) )
+            .reduce( ( a, b ) => a + b );
+        const purple = this.memories
+            .filter( m => m.type === Cultures.PPL )
+            .map( v => Math.E ** ( -decayRate * ( this.system.time - v.time ) ) )
+            .reduce( ( a, b ) => a + b );
+        const newMain =
+            orange > green
+                ? orange > purple
+                    ? Cultures.ORG
+                    : Cultures.PPL
+                : green > purple
+                    ? Cultures.GRN
+                    : Cultures.PPL;
+
+        if ( Math.random() > this.options.form ) this.community = newMain;
+    }
 }

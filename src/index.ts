@@ -9,4 +9,4 @@ console.log( mySystem );
 const c = mySystem.vor.getFarCell()
 console.log( c );
 console.log( mySystem.vor.returnPath( mySystem.settlements[0].cell, c ) )
-export default mySystem
+export default mySystem 
