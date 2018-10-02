@@ -1,4 +1,5 @@
-let ht = [
+let h = require( './hashtags.json' )
+const ht = [
     {
         tag: '#makersgonnamake',
         traits: {
