@@ -77,6 +77,11 @@ export default class Settlement {
         this.spoons = _.floor( ( 1 - system.time / 240 ) * options.nrg );
         system.fameList[this.id] = -1;
         this.roads = [];
+        this.system.settlements.map( st => {
+            if ( st === this ) return;
+            this.roads.push( new Road( st, this, this.system ) );
+        } )
+        this.system._dirtyRoads = true;
     }
     public update() {
         if (
@@ -97,7 +102,7 @@ export default class Settlement {
     }
     public receiveConversation( conv: Conversation ) {
         this.memories.push(
-            new Memory( conv.source, conv.type, this.system.time )
+            new Memory( conv.source, conv.type, this.system.age )
         );
         _.remove( this.system.conversations, c => c === conv );
     }
@@ -232,15 +237,15 @@ export default class Settlement {
         const decayRate = Math.LN2 / 240;
         const orange = this.memories
             .filter( m => m.type === Cultures.ORG )
-            .map( v => Math.E ** ( -decayRate * ( this.system.time - v.time ) ) )
+            .map( v => Math.E ** ( -decayRate * ( this.system.age - v.time ) ) )
             .reduce( ( a, b ) => a + b );
         const green = this.memories
             .filter( m => m.type === Cultures.GRN )
-            .map( v => Math.E ** ( -decayRate * ( this.system.time - v.time ) ) )
+            .map( v => Math.E ** ( -decayRate * ( this.system.age - v.time ) ) )
             .reduce( ( a, b ) => a + b );
         const purple = this.memories
             .filter( m => m.type === Cultures.PPL )
-            .map( v => Math.E ** ( -decayRate * ( this.system.time - v.time ) ) )
+            .map( v => Math.E ** ( -decayRate * ( this.system.age - v.time ) ) )
             .reduce( ( a, b ) => a + b );
         const newMain =
             orange > green
@@ -250,7 +255,13 @@ export default class Settlement {
                 : green > purple
                     ? Cultures.GRN
                     : Cultures.PPL;
-
-        if ( Math.random() > this.options.form ) this.community = newMain;
+        if ( Math.random() > this.options.form ) {
+            let boop = false;
+            if ( this.community !== newMain ) boop = true;
+            this.community = newMain;
+            if ( boop ) {
+                this.system.__updateDist();
+            }
+        }
     }
 }

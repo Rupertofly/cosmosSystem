@@ -1,7 +1,10 @@
+import { polygonContains, VoronoiPolygon } from 'd3';
 import _ from 'lodash';
+import { Socket } from 'socket.io';
 import Que from 'tinyqueue';
 import { isNullOrUndefined } from 'util';
 import sortedinfo from '../../sorting.json';
+import Community from './Community';
 import Road from './Road';
 import Settlement, { Memory, OptionTraits } from './settlement';
 import Conversation from './settlementAspects/Conversation';
@@ -14,7 +17,13 @@ export enum Cultures {
 }
 // This is the system controller
 interface IncomingSettlement extends Array<number> {
-    [cat: number]:number;
+    [cat: number]: number;
+}
+interface DrawObj {
+    conversations: any;
+    roads?: any;
+    settlements?: any;
+    realms?: any;
 }
 enum SettlementCatEnum {
     hobbies,
@@ -32,6 +41,8 @@ export default class SystemController {
     get dists() {
         return this.__distances;
     }
+    public controller: SocketIO.Socket | null = null;
+    public visualiser: SocketIO.Socket | null = null;
     public vor: VoronoiController;
     public settlements: Settlement[];
     public conversations: Conversation[];
@@ -39,7 +50,14 @@ export default class SystemController {
     public time: number = 0;
     public day: number = 0;
     public fameList: { [id: string]: number } = {};
-    private __distances: Array<{ dist: number; settlement: Settlement }>;
+    public _dirtyRoads: boolean = true;
+    private _dirtyRealms: boolean = true;
+    private _dirtySettlements: boolean = true;
+    private _hasVis = false;
+    private __distances: Array<{
+        dist: number;
+        settlement: Settlement
+    }>;
     private __age: number;
     private __running: boolean;
 
@@ -51,6 +69,29 @@ export default class SystemController {
         this.settlements = [];
         this.__distances = [];
         this.conversations = [];
+        this.settlements.push(
+            new Settlement(
+                this.vor.cells.find( g => {
+                    return polygonContains(
+                        g.pgon as VoronoiPolygon<VoronoiCell>,
+                        [ 600, 400 ]
+                    );
+                } ) || this.vor.cells[0],
+                '000',
+                this,
+                Cultures.GRN,
+                {
+                    perf: 0.9,
+                    extro: 0.5,
+                    conv: 0.1,
+                    fame: 0.6,
+                    nrg: 1,
+                    res: 100,
+                    form: 0.8,
+                    disco: 0.5
+                }
+            )
+        );
         this.updateRealms();
     }
     public pause = () => {
@@ -117,12 +158,26 @@ export default class SystemController {
         } );
         this.__updateDist();
     };
+    public attachController( socket: Socket ) {
+        this.controller = socket;
+        socket.on( 'new_set',( setObj ) => {
+            const retVal = this.addSettlement( setObj )
+            socket.emit( 'hash', retVal );
+        } )
+    }
+    public attachVisualiser( socket: Socket ) {
+        this.visualiser = socket;
+        this._hasVis = true;
+        this._dirtyRealms = true;
+        this._dirtyRoads = true;
+        this._dirtySettlements = true;
+    }
     public calculateFame() {
         const frecensy = ( memories: Memory[] ) => {
             const decayRate = Math.LN2 / 800;
             return _.sum(
                 memories.map(
-                    mem => Math.E ** ( -decayRate * ( this.time - mem.time ) )
+                    mem => Math.E ** ( -decayRate * ( this.__age - mem.time ) )
                 )
             );
         };
@@ -152,25 +207,39 @@ export default class SystemController {
         };
         // tslint:disable-next-line:forin
         for ( const trait in options ) {
-            opts.map( ( cat,i ) => {
+            opts.map( ( cat, i ) => {
                 const catInfo = sortedinfo[SettlementCatEnum[i]];
-                options[trait] += catInfo[cat].traits[trait]
+                options[trait] += catInfo[cat].traits[trait];
             } );
-            const t = options[trait]
+            const t = options[trait];
             if ( trait !== 'nrg' || 'res' ) {
-                options[trait] = t > 0.9 ? 0.9 + ( t - 0.9 ) / 5 : t < 0.1 ? 0.1 - ( t + 1 ) / 10 : t;
+                options[trait] =
+                    t > 0.9
+                        ? 0.9 + ( t - 0.9 ) / 5
+                        : t < 0.1
+                            ? 0.1 - ( t + 1 ) / 10
+                            : t;
             }
         }
         let foundHash = false;
         let hash = '05';
         while ( !foundHash ) {
             hash = _.random( 1, 250, false ).toString( 16 );
-            foundHash = !_.includes( this.settlements.map( c => c.id ),hash )
+            foundHash = !_.includes( this.settlements.map( c => c.id ), hash );
         }
-        this.settlements.push( new Settlement( this.vor.getFarCell(),hash,this,Cultures[_.random( 2 )]as Cultures,options as OptionTraits ) )
+        const thisSet = new Settlement(
+            this.vor.getFarCell(),
+            hash,
+            this,
+            Cultures[_.random( 2 )] as Cultures,
+            options as OptionTraits
+        );
+        this.settlements.push( thisSet );
+        this._dirtySettlements = true;
+        return hash;
     }
 
-    private __updateDist() {
+    public __updateDist() {
         this.settlements.map( s => {
             this.settlements.map( f => {
                 if ( s === f ) return;
@@ -180,7 +249,45 @@ export default class SystemController {
                 };
             } );
         } );
+        this._dirtyRealms = true;
     }
+
+    public draw() {
+        const dObj: DrawObj = {
+            conversations: this.conversations.map( c => {
+                return { x: c.position[0], y: c.position[1], c: c.type };
+            } )
+        };
+        if ( this._dirtyRoads ) {
+            dObj.roads = this.roads.map( r => ( {
+                path: r.path(),
+                state: r.use
+            } ) );
+            this._dirtyRoads = false;
+        }
+        if ( this._dirtySettlements ) {
+            dObj.settlements = this.settlements.map( s => {
+                return {
+                    x: s.cell.x,
+                    y: s.cell.y,
+                    id: s.id,
+                    colour: s.community
+                }
+            } );
+            this._dirtySettlements = false;
+        }
+        if ( this._dirtyRealms ) {
+            dObj.realms = this.vor.cells.map( c => {
+                return {
+                    pgon: c.pgon as VoronoiPolygon<VoronoiCell>,
+                    colour: c.leadCommunity
+                }
+            } );
+            this._dirtyRealms = false;
+        }
+        return dObj;
+    }
+
     private __tick() {
         if ( this.__running ) setTimeout( this.__tick, 84 );
         // console.log( `Ping! it's ${this.__age}` );
@@ -191,6 +298,17 @@ export default class SystemController {
 
         this.time++;
         this.time = this.time % 240;
+        this.conversations.map( c => c.update() );
+        this.settlements.map( s => s.update() );
+        _.sampleSize( this.roads, _.min( [ this.roads.length, 30 ] ) ).map( r =>
+            r.update()
+        );
+        if ( this._hasVis ) {
+            const s = this.visualiser as SocketIO.Socket;
+            s.emit( 'draw', this.draw() );
+        }
     }
-    private __newDay() {}
+    private __newDay() {
+        this.settlements.map( s => s.refresh() );
+    }
 }

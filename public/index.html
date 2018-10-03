@@ -6,22 +6,26 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Test</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="core/p5.min.js"></script>
+    <script src="core/p5.dom.min.js"></script>
+    <script src="core/socket.io.js"></script>
+    <script src="src/main.js"></script>
+    <style>
+        body {
+            background-color: RGB(250, 250, 250);
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        html {
+            height: 100%;
+        }
+    </style>
 </head>
 
 <body>
-    Hey Cutie
-    <input type="text" name="msg" id="message" value="boop"><input id="send" type="button" value="Send">
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        localStorage.debug = '*';
-        var socket = io();
-        document.getElementById("send").addEventListener('click', (el, ev) => {
-            const text = document.getElementById('message');
-            socket.emit('msg', text.value);
-            text.value = ''
-        });
-    </script>
-
 </body>
 
 </html>

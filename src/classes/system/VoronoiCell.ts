@@ -1,5 +1,6 @@
 import Vor from 'd3-voronoi';
 import Settlement from './settlement'
+import { Cultures } from './SystemController';
 
 declare interface Road {}
 declare interface Community {}
@@ -13,10 +14,10 @@ export default class VoronoiCell {
     public occupant:
         | null
         | Settlement
-        | Road = null;
+        | Road[] = null;
     public minDistToSettlement = 1000;
     public closestSettlement: null | Settlement = null;
-    public leadCommunity: null | Community = null;
+    public leadCommunity: Cultures = Cultures.GRN
 
     constructor( x: number, y: number, i: number ) {
         
