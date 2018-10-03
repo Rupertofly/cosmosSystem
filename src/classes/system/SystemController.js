@@ -7,7 +7,7 @@ const d3_1 = require("d3");
 const lodash_1 = __importDefault(require("lodash"));
 const tinyqueue_1 = __importDefault(require("tinyqueue"));
 const util_1 = require("util");
-const sorting_json_1 = __importDefault(require("../../sorting.json"));
+const sort_1 = __importDefault(require("../../sort"));
 const Road_1 = __importDefault(require("./Road"));
 const settlement_1 = __importDefault(require("./settlement"));
 const Conversation_1 = __importDefault(require("./settlementAspects/Conversation"));
@@ -166,16 +166,17 @@ class SystemController {
         // tslint:disable-next-line:forin
         for (const trait in options) {
             opts.map((cat, i) => {
-                const catInfo = sorting_json_1.default[SettlementCatEnum[i]];
+                // @ts-ignore
+                const catInfo = sort_1.default[SettlementCatEnum[i]];
                 options[trait] += catInfo[cat].traits[trait];
             });
             const t = options[trait];
-            if (trait !== 'nrg' || 'res') {
+            if (trait !== 'nrg' && trait !== 'res') {
                 options[trait] =
                     t > 0.9
-                        ? 0.9 + (t - 0.9) / 5
+                        ? 0.9
                         : t < 0.1
-                            ? 0.1 - (t + 1) / 10
+                            ? 0.1
                             : t;
             }
         }
@@ -249,7 +250,6 @@ class SystemController {
     __tick() {
         // tslint:disable-next-line:no-this-assignment
         const that = this;
-        console.log(`Ping! it's ${that.day}`);
         if (that.time === 239) {
             that.__newDay();
         }

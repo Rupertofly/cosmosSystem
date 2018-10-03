@@ -3,7 +3,7 @@ import _ from 'lodash';
 import { Socket } from 'socket.io';
 import Que from 'tinyqueue';
 import { isNullOrUndefined } from 'util';
-import sortedinfo from '../../sorting.json';
+import sortedinfo from '../../sort';
 import Community from './Community';
 import Road from './Road';
 import Settlement, { Memory, OptionTraits } from './settlement';
@@ -139,7 +139,7 @@ export default class SystemController {
                 ) {
                     thisCell.minDistToSettlement = costSoFar[thisCell.i];
                     thisCell.closestSettlement = s;
-                    thisCell.leadCommunity = s.community;
+                    thisCell.leadCommunity = s.community as Cultures;
                 }
 
                 thisCell.neighbours.map( next => {
@@ -213,16 +213,17 @@ export default class SystemController {
         // tslint:disable-next-line:forin
         for ( const trait in options ) {
             opts.map( ( cat, i ) => {
-                const catInfo = sortedinfo[SettlementCatEnum[i]];
+                // @ts-ignore
+                const catInfo: any = sortedinfo[SettlementCatEnum[i]];
                 options[trait] += catInfo[cat].traits[trait];
             } );
             const t = options[trait];
-            if ( trait !== 'nrg' || 'res' ) {
+            if ( trait !== 'nrg' && trait !== 'res' ) {
                 options[trait] =
                     t > 0.9
-                        ? 0.9 + ( t - 0.9 ) / 5
+                        ? 0.9
                         : t < 0.1
-                            ? 0.1 - ( t + 1 ) / 10
+                            ? 0.1
                             : t;
             }
         }
@@ -304,7 +305,7 @@ export default class SystemController {
         // tslint:disable-next-line:no-this-assignment
         const that = this;
         
-        console.log( `Ping! it's ${that.day}` );
+
         if ( that.time === 239 ) {
             that.__newDay();
         }

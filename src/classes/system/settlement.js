@@ -53,7 +53,7 @@ class Settlement {
         this.history = [];
         this.strength = options.res;
         this.spoons = lodash_1.default.floor((1 - system.time / 240) * options.nrg);
-        system.fameList[this.id] = -1;
+        system.fameList[this.id] = 30;
         this.roads = [];
         this.system.settlements.map(st => {
             if (st === this)
@@ -98,6 +98,7 @@ class Settlement {
             return;
         }
         this.createExhibition(); */
+        this.spoons--;
         this.sendConversation();
     }
     sendConversation() {
@@ -169,7 +170,9 @@ class Settlement {
                 c = Candidates();
                 if (!c.length) {
                     doFar = doIt.MEH;
-                    c = Candidates();
+                    const x = lodash_1.default.clone(this.system.settlements);
+                    x.splice(this.system.settlements.indexOf(this), 1);
+                    c = x;
                 }
             }
         }
