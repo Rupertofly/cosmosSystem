@@ -1,6 +1,7 @@
 import Expr from 'express';
 import http from 'http';
 import { AddressInfo } from 'net';
+import path from 'path';
 import Sock from 'socket.io';
 import SystemController from './classes/system/SystemController';
 
@@ -17,13 +18,17 @@ export default class MyServer {
         this.server = this.app.listen( 3000, () => {
             this.addressInfo = this.server.address() as AddressInfo;
             const adr = this.addressInfo;
-            console.log( `listening at http://${adr.address}:${adr.port}` );
+            console.log( `listening at http://localhost:${adr.port}` );
         } );
         this.addressInfo = this.server.address() as AddressInfo;
-        this.app.use( Expr.static( '../public' ) );
+        this.app.use( '/vis', Expr.static( path.join( __dirname, '../public' ) ) );
         this.SocketController = Sock( this.server );
-        this.SocketController.on( 'connection',socket => {
-            socket.on( 'connect_vis',() => {
+        this.SocketController.on( 'connection', socket => {
+            console.log( 'new connection' );
+            
+            socket.on( 'connect_vis', () => {
+                console.log( 'vis connected' );
+                
                 this.vis = socket;
                 this.system.attachVisualiser( socket )
             } )

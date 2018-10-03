@@ -3,10 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const d3_1 = require("d3");
 const lodash_1 = __importDefault(require("lodash"));
 const tinyqueue_1 = __importDefault(require("tinyqueue"));
 const util_1 = require("util");
 const sorting_json_1 = __importDefault(require("../../sorting.json"));
+const Road_1 = __importDefault(require("./Road"));
 const settlement_1 = __importDefault(require("./settlement"));
 const Conversation_1 = __importDefault(require("./settlementAspects/Conversation"));
 const VoronoiController_1 = __importDefault(require("./VoronoiController"));
@@ -27,10 +29,17 @@ var SettlementCatEnum;
 })(SettlementCatEnum || (SettlementCatEnum = {}));
 class SystemController {
     constructor() {
+        this.controller = null;
+        this.visualiser = null;
+        this.conversations = [];
         this.roads = [];
         this.time = 0;
         this.day = 0;
         this.fameList = {};
+        this._dirtyRoads = true;
+        this._dirtyRealms = true;
+        this._dirtySettlements = true;
+        this._hasVis = false;
         this.pause = () => {
             this.__running = false;
         };
@@ -85,14 +94,24 @@ class SystemController {
             });
             this.__updateDist();
         };
-        this.__age = 0;
-        this.__running = true;
-        this.__tick();
         this.vor = new VoronoiController_1.default(1200, 800);
         this.settlements = [];
         this.__distances = [];
-        this.conversations = [];
+        this.settlements.push(new settlement_1.default(this.vor.cells.find(g => {
+            return d3_1.polygonContains(g.pgon, [600, 400]);
+        }) || this.vor.cells[0], '000', this, Cultures.GRN, {
+            perf: 0.9,
+            extro: 0.5,
+            conv: 0.1,
+            fame: 0.6,
+            nrg: 1,
+            res: 100,
+            form: 0.8,
+            disco: 0.5
+        }));
         this.updateRealms();
+        this.__age = 0;
+        this.__running = false;
     }
     get age() {
         return this.__age;
@@ -100,10 +119,28 @@ class SystemController {
     get dists() {
         return this.__distances;
     }
+    attachController(socket) {
+        this.controller = socket;
+        socket.on('new_set', (setObj) => {
+            const retVal = this.addSettlement(setObj);
+            socket.emit('hash', retVal);
+        });
+    }
+    attachVisualiser(socket) {
+        this.visualiser = socket;
+        this._hasVis = true;
+        this._dirtyRealms = true;
+        this._dirtyRoads = true;
+        this._dirtySettlements = true;
+        this.__running = true;
+        setInterval(((t) => {
+            return () => t.__tick();
+        })(this), 1000 / 12);
+    }
     calculateFame() {
         const frecensy = (memories) => {
             const decayRate = Math.LN2 / 800;
-            return lodash_1.default.sum(memories.map(mem => Math.pow(Math.E, (-decayRate * (this.time - mem.time)))));
+            return lodash_1.default.sum(memories.map(mem => Math.pow(Math.E, (-decayRate * (this.__age - mem.time)))));
         };
         for (const member in this.fameList)
             delete this.fameList[member];
@@ -134,7 +171,12 @@ class SystemController {
             });
             const t = options[trait];
             if (trait !== 'nrg' || 'res') {
-                options[trait] = t > 0.9 ? 0.9 + (t - 0.9) / 5 : t < 0.1 ? 0.1 - (t + 1) / 10 : t;
+                options[trait] =
+                    t > 0.9
+                        ? 0.9 + (t - 0.9) / 5
+                        : t < 0.1
+                            ? 0.1 - (t + 1) / 10
+                            : t;
             }
         }
         let foundHash = false;
@@ -143,7 +185,18 @@ class SystemController {
             hash = lodash_1.default.random(1, 250, false).toString(16);
             foundHash = !lodash_1.default.includes(this.settlements.map(c => c.id), hash);
         }
-        this.settlements.push(new settlement_1.default(this.vor.getFarCell(), hash, this, Cultures[lodash_1.default.random(2)], options));
+        const thisSet = new settlement_1.default(this.vor.getFarCell(), hash, this, ["Green", "Orange", "Purple"][lodash_1.default.random(0, 2, false)], options);
+        this.settlements.push(thisSet);
+        this._dirtySettlements = true;
+        this.updateRealms();
+        if (this.settlements.length > 1) {
+            this.settlements.map(set => {
+                if (set === thisSet)
+                    return;
+                this.roads.push(new Road_1.default(thisSet, set, this));
+            });
+        }
+        return hash;
     }
     __updateDist() {
         this.settlements.map(s => {
@@ -156,19 +209,70 @@ class SystemController {
                 };
             });
         });
+        this._dirtyRealms = true;
+    }
+    draw() {
+        const dObj = {
+            conversations: this.conversations.map(c => {
+                return { x: c.position[0], y: c.position[1], c: c.type };
+            })
+        };
+        if (this._dirtyRoads) {
+            dObj.roads = this.roads.map(r => ({
+                path: r.path(),
+                state: r.use
+            }));
+            this._dirtyRoads = false;
+        }
+        if (this._dirtySettlements) {
+            dObj.settlements = this.settlements.map(s => {
+                return {
+                    x: s.cell.x,
+                    y: s.cell.y,
+                    id: s.id,
+                    colour: s.community
+                };
+            });
+            this._dirtySettlements = false;
+        }
+        if (this._dirtyRealms) {
+            dObj.realms = this.vor.cells.map(c => {
+                return {
+                    pgon: c.pgon,
+                    colour: c.leadCommunity
+                };
+            });
+            this._dirtyRealms = false;
+        }
+        return dObj;
     }
     __tick() {
-        if (this.__running)
-            setTimeout(this.__tick, 84);
-        // console.log( `Ping! it's ${this.__age}` );
-        if (this.time === 239) {
-            this.__newDay();
+        // tslint:disable-next-line:no-this-assignment
+        const that = this;
+        console.log(`Ping! it's ${that.day}`);
+        if (that.time === 239) {
+            that.__newDay();
         }
-        this.__age++;
-        this.time++;
-        this.time = this.time % 240;
+        that.__age++;
+        that.time++;
+        that.time = that.time % 240;
+        that.conversations.map(c => c.update());
+        if (that.settlements) {
+            that.settlements.map(s => s.update());
+        }
+        if (that.roads) {
+            lodash_1.default.sampleSize(that.roads, lodash_1.default.min([that.roads.length, 30])).map(r => r.update());
+        }
+        if (that._hasVis) {
+            const s = that.visualiser;
+            // @ts-ignore
+            that.visualiser.emit('draw', that.draw());
+        }
     }
-    __newDay() { }
+    __newDay() {
+        this.settlements.map(s => s.refresh());
+        this.day++;
+    }
 }
 exports.default = SystemController;
 //# sourceMappingURL=SystemController.js.map

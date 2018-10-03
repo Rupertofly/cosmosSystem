@@ -24,7 +24,7 @@ export default class Conversation {
         this.position = this.path[this.__index];
     }
     public update() {
-        if ( this.path.length - this.__index > 5 ) {
+        if ( this.path.length - this.__index < 5 ) {
             this._remove();
             return;
         }

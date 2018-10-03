@@ -34,6 +34,7 @@ export default class VoronoiController {
             l.source.neighbours.push( l.target );
             l.target.neighbours.push( l.source );
         } );
+        this.polygons.map( pg => pg.data.pgon = pg );
     }
     public getFarCell() {
         return this.cells.reduce( ( p, c ) => {

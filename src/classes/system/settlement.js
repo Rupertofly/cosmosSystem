@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const lodash_1 = __importDefault(require("lodash"));
+const Road_1 = __importDefault(require("./Road"));
 const SystemController_1 = require("./SystemController");
 var doIt;
 (function (doIt) {
@@ -54,6 +55,12 @@ class Settlement {
         this.spoons = lodash_1.default.floor((1 - system.time / 240) * options.nrg);
         system.fameList[this.id] = -1;
         this.roads = [];
+        this.system.settlements.map(st => {
+            if (st === this)
+                return;
+            this.roads.push(new Road_1.default(st, this, this.system));
+        });
+        this.system._dirtyRoads = true;
     }
     update() {
         if (lodash_1.default.random(0, lodash_1.default.floor(240 - this.system.time / this.spoons + 1) + 1, false) < this.timeSinceSpoon &&
@@ -67,7 +74,7 @@ class Settlement {
         this.spoons = this.options.nrg;
     }
     receiveConversation(conv) {
-        this.memories.push(new Memory(conv.source, conv.type, this.system.time));
+        this.memories.push(new Memory(conv.source, conv.type, this.system.age));
         lodash_1.default.remove(this.system.conversations, c => c === conv);
     }
     getFame() {
@@ -167,6 +174,8 @@ class Settlement {
             }
         }
         const choice = lodash_1.default.sample(c);
+        if (!choice)
+            return;
         const cType = Math.random() > 0.5
             ? this.community
             : this.community !== choice.community &&
@@ -181,15 +190,15 @@ class Settlement {
         const decayRate = Math.LN2 / 240;
         const orange = this.memories
             .filter(m => m.type === SystemController_1.Cultures.ORG)
-            .map(v => Math.pow(Math.E, (-decayRate * (this.system.time - v.time))))
+            .map(v => Math.pow(Math.E, (-decayRate * (this.system.age - v.time))))
             .reduce((a, b) => a + b);
         const green = this.memories
             .filter(m => m.type === SystemController_1.Cultures.GRN)
-            .map(v => Math.pow(Math.E, (-decayRate * (this.system.time - v.time))))
+            .map(v => Math.pow(Math.E, (-decayRate * (this.system.age - v.time))))
             .reduce((a, b) => a + b);
         const purple = this.memories
             .filter(m => m.type === SystemController_1.Cultures.PPL)
-            .map(v => Math.pow(Math.E, (-decayRate * (this.system.time - v.time))))
+            .map(v => Math.pow(Math.E, (-decayRate * (this.system.age - v.time))))
             .reduce((a, b) => a + b);
         const newMain = orange > green
             ? orange > purple
@@ -198,8 +207,15 @@ class Settlement {
             : green > purple
                 ? SystemController_1.Cultures.GRN
                 : SystemController_1.Cultures.PPL;
-        if (Math.random() > this.options.form)
+        if (Math.random() > this.options.form) {
+            let boop = false;
+            if (this.community !== newMain)
+                boop = true;
             this.community = newMain;
+            if (boop) {
+                this.system.__updateDist();
+            }
+        }
     }
 }
 exports.default = Settlement;

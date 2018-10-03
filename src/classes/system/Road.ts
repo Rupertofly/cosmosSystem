@@ -9,7 +9,7 @@ export default class Road {
     public use: number;
     public lastUse: number;
     public stops: VoronoiCell[];
-        public segmentCount = _.floor( this.length / 4 );
+    public segmentCount: number; 
     private __path: Array<[number, number]>
     constructor(
         public destA: Settlement,
@@ -23,6 +23,7 @@ export default class Road {
             cell.type = cell.type === 0 ? 1 : cell.type;
             if ( cell.occupant === null ) cell.occupant = [ this ]; else if ( cell.occupant instanceof Array ) cell.occupant.push( this );
         } )
+        this.segmentCount = _.floor( this.length / 4 );
         this.__path = [];
         const [ ix,iy ] = [
             d3P.interpolateBasis( this.stops.map( c => c.x ) ),

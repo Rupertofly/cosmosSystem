@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const SystemController_1 = require("./SystemController");
 class VoronoiCell {
     constructor(x, y, i) {
         this.x = 0;
@@ -10,7 +11,7 @@ class VoronoiCell {
         this.occupant = null;
         this.minDistToSettlement = 1000;
         this.closestSettlement = null;
-        this.leadCommunity = null;
+        this.leadCommunity = SystemController_1.Cultures.GRN;
         ['x', 'y', 'i'].map(
         // @ts-ignore
         (v, j) => (this[v] = arguments[j]));

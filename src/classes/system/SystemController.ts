@@ -45,7 +45,7 @@ export default class SystemController {
     public visualiser: SocketIO.Socket | null = null;
     public vor: VoronoiController;
     public settlements: Settlement[];
-    public conversations: Conversation[];
+    public conversations: Conversation[] = [];
     public roads: Road[] = [];
     public time: number = 0;
     public day: number = 0;
@@ -62,13 +62,10 @@ export default class SystemController {
     private __running: boolean;
 
     constructor() {
-        this.__age = 0;
-        this.__running = true;
-        this.__tick();
+        
         this.vor = new VoronoiController( 1200, 800 );
         this.settlements = [];
         this.__distances = [];
-        this.conversations = [];
         this.settlements.push(
             new Settlement(
                 this.vor.cells.find( g => {
@@ -93,6 +90,9 @@ export default class SystemController {
             )
         );
         this.updateRealms();
+        this.__age = 0;
+        this.__running = false;
+
     }
     public pause = () => {
         this.__running = false;
@@ -171,6 +171,11 @@ export default class SystemController {
         this._dirtyRealms = true;
         this._dirtyRoads = true;
         this._dirtySettlements = true;
+        this.__running = true;
+        setInterval( ( ( t: SystemController ) => {
+            return () => t.__tick();
+        } )( this )
+            , 1000 / 12 )
     }
     public calculateFame() {
         const frecensy = ( memories: Memory[] ) => {
@@ -231,11 +236,17 @@ export default class SystemController {
             this.vor.getFarCell(),
             hash,
             this,
-            Cultures[_.random( 2 )] as Cultures,
+            [ "Green" , "Orange" , "Purple" ][_.random( 0, 2,false )] as Cultures,
             options as OptionTraits
         );
         this.settlements.push( thisSet );
         this._dirtySettlements = true;
+        this.updateRealms();
+        if ( this.settlements.length > 1 ) { this.settlements.map( set => {
+            if ( set === thisSet ) return;
+            this.roads.push( new Road( thisSet, set, this ) );
+        } )
+        }
         return hash;
     }
 
@@ -255,6 +266,7 @@ export default class SystemController {
     public draw() {
         const dObj: DrawObj = {
             conversations: this.conversations.map( c => {
+
                 return { x: c.position[0], y: c.position[1], c: c.type };
             } )
         };
@@ -288,27 +300,35 @@ export default class SystemController {
         return dObj;
     }
 
-    private __tick() {
-        if ( this.__running ) setTimeout( this.__tick, 84 );
-        // console.log( `Ping! it's ${this.__age}` );
-        if ( this.time === 239 ) {
-            this.__newDay();
+    public __tick() {
+        // tslint:disable-next-line:no-this-assignment
+        const that = this;
+        
+        console.log( `Ping! it's ${that.day}` );
+        if ( that.time === 239 ) {
+            that.__newDay();
         }
-        this.__age++;
+        that.__age++;
 
-        this.time++;
-        this.time = this.time % 240;
-        this.conversations.map( c => c.update() );
-        this.settlements.map( s => s.update() );
-        _.sampleSize( this.roads, _.min( [ this.roads.length, 30 ] ) ).map( r =>
+        that.time++;
+        that.time = that.time % 240;
+        that.conversations.map( c => c.update() );
+        if ( that.settlements ) {
+            that.settlements.map( s => s.update() );
+        }
+        if( that.roads ) {
+        _.sampleSize( that.roads, _.min( [ that.roads.length, 30 ] ) ).map( r =>
             r.update()
         );
-        if ( this._hasVis ) {
-            const s = this.visualiser as SocketIO.Socket;
-            s.emit( 'draw', this.draw() );
+        }
+        if ( that._hasVis ) {
+            const s = that.visualiser as SocketIO.Socket;
+            // @ts-ignore
+            that.visualiser.emit( 'draw', that.draw() );
         }
     }
     private __newDay() {
         this.settlements.map( s => s.refresh() );
+        this.day++;
     }
 }

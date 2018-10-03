@@ -70,7 +70,7 @@ export default class Settlement {
         public cell: VoronoiCell,
         public id: string,
         public system: SystemController,
-        public community: Cultures,
+        public community: "Green" | "Orange" | "Purple" ,
         public options: OptionTraits
     ) {
         this.strength = options.res;
@@ -214,6 +214,7 @@ export default class Settlement {
             }
         }
         const choice = _.sample( c ) as Settlement;
+        if ( !choice ) return;
         const cType =
             Math.random() > 0.5
                 ? this.community
