@@ -23,17 +23,17 @@ export default class MyServer {
         this.addressInfo = this.server.address() as AddressInfo;
         this.app.use( '/vis', Expr.static( path.join( __dirname, '../public' ) ) );
         this.SocketController = Sock( this.server );
-        this.SocketController.on( 'connection', socket => {
+        this.SocketController.on( 'connect', socket => {
             console.log( 'new connection' );
-            
             socket.on( 'connect_vis', () => {
                 console.log( 'vis connected' );
                 
                 this.vis = socket;
                 this.system.attachVisualiser( socket )
             } )
-            socket.on( 'connect_cont',() => {
+            socket.on( 'vessel',() => {
                 this.controller = socket;
+                console.log( 'c connected' );
                 this.system.attachController( socket );
 
             } )

@@ -13,7 +13,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const a_star_1 = __importDefault(require("a-star"));
 const d3_polygon_1 = require("d3-polygon");
 const Vor = __importStar(require("d3-voronoi"));
+const GH = __importStar(require("greiner-hormann"));
 const lodash_1 = __importDefault(require("lodash"));
+const calibrate_1 = __importDefault(require("../../calibrate"));
 const VoronoiCell_1 = __importDefault(require("./VoronoiCell"));
 class VoronoiController {
     constructor(w, h, r) {
@@ -29,7 +31,7 @@ class VoronoiController {
                     return 1;
             }
         };
-        r = r || 16;
+        r = r || 256;
         // assign everything
         const vv = Vor;
         console.log(Vor);
@@ -38,17 +40,23 @@ class VoronoiController {
             .y(v => v.y)
             .size([w, h]);
         this.cells = lodash_1.default.range(512).map(ix => {
-            return new VoronoiCell_1.default(lodash_1.default.random(w, false), lodash_1.default.random(h, false), ix);
+            return new VoronoiCell_1.default(500 + lodash_1.default.random(true) * 50, 500 + lodash_1.default.random(true) * 50, ix);
         });
         // relax
         for (let iter = 0; iter < r; iter++) {
             const dP = this.vFunc.polygons(this.cells);
             dP.map(p => {
-                const [x, y] = d3_polygon_1.polygonCentroid(p);
+                const cr = GH.intersection(calibrate_1.default.reverse(), p)[0];
+                cr.data = p.data;
+                const [x, y] = d3_polygon_1.polygonCentroid(cr);
                 p.data.setPos(x, y);
             });
         }
-        this.polygons = this.vFunc.polygons(this.cells);
+        this.polygons = this.vFunc.polygons(this.cells).map(i => {
+            const cr = GH.intersection(calibrate_1.default.reverse(), i)[0];
+            cr.data = i.data;
+            return cr;
+        });
         const dg = this.vFunc(this.cells).links();
         dg.map(l => {
             l.source.neighbours.push(l.target);

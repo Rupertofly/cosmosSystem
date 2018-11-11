@@ -1,7 +1,8 @@
 import _ from 'lodash';
+import Culture from './Culture'
 import Road from './Road';
 import Conversation from './settlementAspects/Conversation';
-import SystemController, { Cultures } from './SystemController';
+import SystemController from './SystemController';
 import VoronoiCell from './VoronoiCell';
 enum doIt {
     DO,
@@ -37,29 +38,11 @@ export interface OptionTraits {
 export class Memory {
     constructor(
         public settlement: Settlement,
-        public type: Cultures,
+        public type: Culture,
         public time: number
     ) {}
 }
 export default class Settlement {
-    public readonly Exhibits = {
-        Orange: 1,
-        Green: 1,
-        Purple: 1,
-        getLength() {
-            return this.Orange + this.Green + this.Purple;
-        },
-        doNormalise() {
-            const size = this.getLength();
-            this.Orange = _.floor( ( this.Orange / size ) * 10 );
-            this.Green = _.floor( ( this.Green / size ) * 10 );
-            this.Purple = _.floor( ( this.Purple / size ) * 10 );
-        },
-        addExhibit( col: Cultures ) {
-            if ( this.getLength() > 30 ) this.doNormalise();
-            this[col]++;
-        }
-    };
     public strength = 3;
     public memories: Memory[] = [];
     public roads: Road[];
@@ -70,7 +53,8 @@ export default class Settlement {
         public cell: VoronoiCell,
         public id: string,
         public system: SystemController,
-        public community: "Green" | "Orange" | "Purple" ,
+        public community: Culture
+        ,
         public options: OptionTraits
     ) {
         this.strength = options.res;
@@ -218,47 +202,25 @@ export default class Settlement {
         }
         const choice = _.sample( c ) as Settlement;
         if ( !choice ) return;
-        const cType =
-            Math.random() > 0.5
-                ? this.community
-                : this.community !== choice.community &&
-                  Math.random() < this.options.form
-                    ? this.community
-                    : _.sample(
-                          [ Cultures.GRN, Cultures.PPL, Cultures.ORG ].splice(
-                              [ Cultures.GRN, Cultures.PPL, Cultures.ORG ].indexOf(
-                                  this.community
-                              ),
-                              1
-                          )
-                    ) as Cultures.GRN| Cultures.PPL| Cultures.ORG ;
-        this.system.createConversation( this, choice, cType as Cultures );
+        const cType = new Culture()
+        this.system.createConversation( this, choice, cType as Culture );
     }
     private createExhibition() {}
     private generateActor() {}
 
     private updateCommunity() {
         const decayRate = Math.LN2 / 240;
-        const orange = this.memories
-            .filter( m => m.type === Cultures.ORG )
-            .map( v => Math.E ** ( -decayRate * ( this.system.age - v.time ) ) )
-            .reduce( ( a, b ) => a + b );
-        const green = this.memories
-            .filter( m => m.type === Cultures.GRN )
-            .map( v => Math.E ** ( -decayRate * ( this.system.age - v.time ) ) )
-            .reduce( ( a, b ) => a + b );
-        const purple = this.memories
-            .filter( m => m.type === Cultures.PPL )
-            .map( v => Math.E ** ( -decayRate * ( this.system.age - v.time ) ) )
-            .reduce( ( a, b ) => a + b );
-        const newMain =
-            orange > green
-                ? orange > purple
-                    ? Cultures.ORG
-                    : Cultures.PPL
-                : green > purple
-                    ? Cultures.GRN
-                    : Cultures.PPL;
+        const communities: Culture[] = [];
+        for ( const mem of this.memories ) {
+            if ( !communities.find( e => e === mem.type ) ) communities.push( mem.type );
+        }
+        const values:any[] = [];
+        communities.map( com => {
+            const thisVal = this.memories.filter( m => m.type === com )
+                .map( v => Math.E ** ( -decayRate * ( this.system.age - v.time ) ) ).reduce( ( a, b ) => a + b );
+            values.push( {c:com,val:thisVal} )
+        } )
+        const newMain = values.sort( ( a, b ) => a.val - b.val )[0].com as Culture;
         if ( Math.random() > this.options.form ) {
             let boop = false;
             if ( this.community !== newMain ) boop = true;

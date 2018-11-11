@@ -1,0 +1,46 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+    };
+    Object.defineProperty(exports, "__esModule", { value: true });
+    const settlement_1 = __importDefault(require("./classes/system/settlement"));
+    const SystemController_1 = __importDefault(require("./classes/system/SystemController"));
+    const mySystem = new SystemController_1.default();
+    mySystem.settlements.push(new settlement_1.default(mySystem.vor.cells[64]));
+    mySystem.updateRealms();
+    console.log(mySystem);
+    const c = mySystem.vor.getFarCell();
+    console.log(c);
+    console.log(mySystem.vor.returnPath(mySystem.settlements[0].cell, c));
+    //# sourceMappingURL=index.js.map
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+    };
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+    };
+    Object.defineProperty(exports, "__esModule", { value: true });
+    const settlement_1 = __importDefault(require("./classes/system/settlement"));
+    const SystemController_1 = __importDefault(require("./classes/system/SystemController"));
+    const mySystem = new SystemController_1.default();
+    mySystem.settlements.push(new settlement_1.default(mySystem.vor.cells[64]));
+    mySystem.updateRealms();
+    console.log(mySystem);
+    const c = mySystem.vor.getFarCell();
+    console.log(c);
+    console.log(mySystem.vor.returnPath(mySystem.settlements[0].cell, c));
+    //# sourceMappingURL=index.js.map
+require('./index.js')
+let range = require("./index.js")
+range
+JSON.stringify(range)
+let range2 = require("./index.js")
+range2
+JSON.stringify(range2)
+console.log(require("./index.js"))
+.
+repl
+
