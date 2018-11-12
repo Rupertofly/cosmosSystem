@@ -65,6 +65,6 @@ typings/
 # Ignore built ts files
 dist/**/*
 Icon*
-
+.DS_Store
 # Editors
 .vscode/**/*
