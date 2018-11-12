@@ -291,7 +291,14 @@ class SystemController {
         }
         else {
             console.log(`fTime: ${fn - st}`);
-            setTimeout(f(that), 130 - (fn - st));
+            if (fn - st > 0) {
+                setTimeout(f(that), 60 - (fn - st));
+                console.log('setTimeount<9');
+            }
+            else {
+                setTimeout(f(that), 60);
+                console.log('setTimeountMax');
+            }
         }
     }
     __newDay() {

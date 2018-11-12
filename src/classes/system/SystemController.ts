@@ -102,11 +102,7 @@ export default class SystemController {
         );
         this.updateRealms();
         this.__age = 0;
-<<<<<<< HEAD
         this.play()
-=======
-        this.__running = false;
->>>>>>> 33cd1fa22d975dc254747bba1913c132eefe378e
     }
     public pause = () => {
         this.__running = false;
@@ -206,15 +202,6 @@ export default class SystemController {
         this._dirtyRoads = true;
         this._dirtySettlements = true;
         this.__running = true;
-<<<<<<< HEAD
-=======
-        setInterval(
-            ( ( t: SystemController ) => {
-                return () => t.__tick();
-            } )( this ),
-            1000 / 6
-        );
->>>>>>> 33cd1fa22d975dc254747bba1913c132eefe378e
     }
     public calculateFame() {
         const frecensy = ( memories: Memory[] ) => {
@@ -332,11 +319,7 @@ export default class SystemController {
 
     public draw() {
         console.log( this.age );
-<<<<<<< HEAD
         const st = new Date().getMilliseconds();
-=======
-        
->>>>>>> 33cd1fa22d975dc254747bba1913c132eefe378e
         const dObj: DrawObj = {
             conversations: this.conversations.map(
                 c => {
@@ -405,10 +388,7 @@ export default class SystemController {
         if ( that.settlements ) {
             that.settlements.map( s => s.update() );
         }
-<<<<<<< HEAD
         console.log( `stlmnt updated` );
-=======
->>>>>>> 33cd1fa22d975dc254747bba1913c132eefe378e
         if ( that.roads ) {
             _.sampleSize(
                 that.roads,
@@ -424,7 +404,6 @@ export default class SystemController {
                 'draw',
                 that.draw()
             );
-<<<<<<< HEAD
         }
         console.log( `vis updated` );
         let f = ( t: SystemController ) => {
@@ -433,10 +412,14 @@ export default class SystemController {
         const fn = new Date().getMilliseconds();
         if ( fn - st > 130 ) { f( that ) } else {
             console.log( `fTime: ${fn-st}` );
-            
-            setTimeout( f( that ), 130 - ( fn - st ) );
-=======
->>>>>>> 33cd1fa22d975dc254747bba1913c132eefe378e
+            if ( fn-st > 0 ) {
+                setTimeout( f( that ), 60 - ( fn - st ) );
+                console.log( 'setTimeount<9' );
+                
+            } else {
+                setTimeout( f( that ), 60 );
+                console.log( 'setTimeountMax' );
+            }
         }
     }
     private __newDay() {
