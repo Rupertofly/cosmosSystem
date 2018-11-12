@@ -4,8 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const lodash_1 = __importDefault(require("lodash"));
+const Culture_1 = __importDefault(require("./Culture"));
 const Road_1 = __importDefault(require("./Road"));
-const SystemController_1 = require("./SystemController");
 var doIt;
 (function (doIt) {
     doIt[doIt["DO"] = 0] = "DO";
@@ -27,25 +27,6 @@ class Settlement {
         this.system = system;
         this.community = community;
         this.options = options;
-        this.Exhibits = {
-            Orange: 1,
-            Green: 1,
-            Purple: 1,
-            getLength() {
-                return this.Orange + this.Green + this.Purple;
-            },
-            doNormalise() {
-                const size = this.getLength();
-                this.Orange = lodash_1.default.floor((this.Orange / size) * 10);
-                this.Green = lodash_1.default.floor((this.Green / size) * 10);
-                this.Purple = lodash_1.default.floor((this.Purple / size) * 10);
-            },
-            addExhibit(col) {
-                if (this.getLength() > 30)
-                    this.doNormalise();
-                this[col]++;
-            }
-        };
         this.strength = 3;
         this.memories = [];
         this.spoons = 5;
@@ -63,15 +44,19 @@ class Settlement {
         this.system._dirtyRoads = true;
     }
     update() {
-        if (lodash_1.default.random(0, lodash_1.default.floor(240 - this.system.time / this.spoons + 1) + 1, false) < this.timeSinceSpoon &&
-            this.spoons) {
+        if (!this.spoons)
+            return;
+        if ((this.timeSinceSpoon > 60) || (this.timeSinceSpoon > 5 && lodash_1.default.random(1, false))) {
             this.useSpoon();
+            this.timeSinceSpoon = 0;
             return;
         }
         this.timeSinceSpoon++;
     }
     refresh() {
-        this.spoons = this.options.nrg;
+        if (this.spoons < 1) {
+            this.spoons = this.options.nrg;
+        }
     }
     receiveConversation(conv) {
         this.memories.push(new Memory(conv.source, conv.type, this.system.age));
@@ -99,6 +84,8 @@ class Settlement {
         }
         this.createExhibition(); */
         this.spoons--;
+        if (this.system.conversations.length > 10)
+            return;
         this.sendConversation();
     }
     sendConversation() {
@@ -179,37 +166,25 @@ class Settlement {
         const choice = lodash_1.default.sample(c);
         if (!choice)
             return;
-        const cType = Math.random() > 0.5
-            ? this.community
-            : this.community !== choice.community &&
-                Math.random() < this.options.form
-                ? this.community
-                : lodash_1.default.sample([SystemController_1.Cultures.GRN, SystemController_1.Cultures.PPL, SystemController_1.Cultures.ORG].splice([SystemController_1.Cultures.GRN, SystemController_1.Cultures.PPL, SystemController_1.Cultures.ORG].indexOf(this.community), 1));
+        const cType = new Culture_1.default();
         this.system.createConversation(this, choice, cType);
     }
     createExhibition() { }
     generateActor() { }
     updateCommunity() {
         const decayRate = Math.LN2 / 240;
-        const orange = this.memories
-            .filter(m => m.type === SystemController_1.Cultures.ORG)
-            .map(v => Math.pow(Math.E, (-decayRate * (this.system.age - v.time))))
-            .reduce((a, b) => a + b);
-        const green = this.memories
-            .filter(m => m.type === SystemController_1.Cultures.GRN)
-            .map(v => Math.pow(Math.E, (-decayRate * (this.system.age - v.time))))
-            .reduce((a, b) => a + b);
-        const purple = this.memories
-            .filter(m => m.type === SystemController_1.Cultures.PPL)
-            .map(v => Math.pow(Math.E, (-decayRate * (this.system.age - v.time))))
-            .reduce((a, b) => a + b);
-        const newMain = orange > green
-            ? orange > purple
-                ? SystemController_1.Cultures.ORG
-                : SystemController_1.Cultures.PPL
-            : green > purple
-                ? SystemController_1.Cultures.GRN
-                : SystemController_1.Cultures.PPL;
+        const communities = [];
+        for (const mem of this.memories) {
+            if (!communities.find(e => e === mem.type))
+                communities.push(mem.type);
+        }
+        const values = [];
+        communities.map(com => {
+            const thisVal = this.memories.filter(m => m.type === com)
+                .map(v => Math.pow(Math.E, (-decayRate * (this.system.age - v.time)))).reduce((a, b) => a + b);
+            values.push({ c: com, val: thisVal });
+        });
+        const newMain = values.sort((a, b) => a.val - b.val)[0].com;
         if (Math.random() > this.options.form) {
             let boop = false;
             if (this.community !== newMain)

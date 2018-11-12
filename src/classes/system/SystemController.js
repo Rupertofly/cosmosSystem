@@ -7,17 +7,11 @@ const d3_1 = require("d3");
 const lodash_1 = __importDefault(require("lodash"));
 const tinyqueue_1 = __importDefault(require("tinyqueue"));
 const util_1 = require("util");
-const sort_1 = __importDefault(require("../../sort"));
+const Culture_1 = __importDefault(require("./Culture"));
 const Road_1 = __importDefault(require("./Road"));
 const settlement_1 = __importDefault(require("./settlement"));
 const Conversation_1 = __importDefault(require("./settlementAspects/Conversation"));
 const VoronoiController_1 = __importDefault(require("./VoronoiController"));
-var Cultures;
-(function (Cultures) {
-    Cultures["ORG"] = "Orange";
-    Cultures["GRN"] = "Green";
-    Cultures["PPL"] = "Purple";
-})(Cultures = exports.Cultures || (exports.Cultures = {}));
 var SettlementCatEnum;
 (function (SettlementCatEnum) {
     SettlementCatEnum[SettlementCatEnum["hobbies"] = 0] = "hobbies";
@@ -31,6 +25,7 @@ class SystemController {
     constructor() {
         this.controller = null;
         this.visualiser = null;
+        this.cultures = [];
         this.conversations = [];
         this.roads = [];
         this.time = 0;
@@ -45,7 +40,7 @@ class SystemController {
         };
         this.play = () => {
             this.__running = true;
-            this.__tick();
+            this.__tick.bind(this)();
         };
         this.updateRealms = () => {
             const cost = (cell) => {
@@ -69,17 +64,22 @@ class SystemController {
                 while (frontier.length) {
                     const thisCell = frontier.pop()[0];
                     if (lodash_1.default.includes(done, thisCell) &&
-                        costSoFar[thisCell.i] >= thisCell.minDistToSettlement) {
+                        costSoFar[thisCell.i] >=
+                            thisCell.minDistToSettlement) {
                         continue;
                     }
                     if (thisCell.type !== 2 &&
-                        costSoFar[thisCell.i] < thisCell.minDistToSettlement) {
-                        thisCell.minDistToSettlement = costSoFar[thisCell.i];
+                        costSoFar[thisCell.i] <
+                            thisCell.minDistToSettlement) {
+                        thisCell.minDistToSettlement =
+                            costSoFar[thisCell.i];
                         thisCell.closestSettlement = s;
-                        thisCell.leadCommunity = s.community;
+                        thisCell.leadCommunity =
+                            s.community;
                     }
                     thisCell.neighbours.map(next => {
-                        const thisDist = costSoFar[thisCell.i] + cost(next);
+                        const thisDist = costSoFar[thisCell.i] +
+                            cost(next);
                         if (util_1.isNullOrUndefined(costSoFar[next.i])) {
                             costSoFar[next.i] = 1000;
                         }
@@ -87,19 +87,23 @@ class SystemController {
                             thisDist,
                             costSoFar[next.i]
                         ]);
-                        frontier.push([next, thisDist]);
+                        frontier.push([
+                            next,
+                            thisDist
+                        ]);
                     });
                     done.push(thisCell);
                 }
             });
             this.__updateDist();
         };
-        this.vor = new VoronoiController_1.default(1200, 800);
+        this.vor = new VoronoiController_1.default(2000, 2000);
         this.settlements = [];
         this.__distances = [];
+        this.__running = true;
         this.settlements.push(new settlement_1.default(this.vor.cells.find(g => {
             return d3_1.polygonContains(g.pgon, [600, 400]);
-        }) || this.vor.cells[0], '000', this, Cultures.GRN, {
+        }) || this.vor.cells[0], '000', this, new Culture_1.default(), {
             perf: 0.9,
             extro: 0.5,
             conv: 0.1,
@@ -111,7 +115,7 @@ class SystemController {
         }));
         this.updateRealms();
         this.__age = 0;
-        this.__running = false;
+        this.play();
     }
     get age() {
         return this.__age;
@@ -121,8 +125,10 @@ class SystemController {
     }
     attachController(socket) {
         this.controller = socket;
-        socket.on('new_set', (setObj) => {
-            const retVal = this.addSettlement(setObj);
+        console.log('controller attached');
+        socket.on('newID', setObj => {
+            console.log(setObj);
+            const retVal = this.addSettlement(undefined, setObj);
             socket.emit('hash', retVal);
         });
     }
@@ -133,17 +139,18 @@ class SystemController {
         this._dirtyRoads = true;
         this._dirtySettlements = true;
         this.__running = true;
-        setInterval(((t) => {
-            return () => t.__tick();
-        })(this), 1000 / 12);
     }
     calculateFame() {
         const frecensy = (memories) => {
             const decayRate = Math.LN2 / 800;
-            return lodash_1.default.sum(memories.map(mem => Math.pow(Math.E, (-decayRate * (this.__age - mem.time)))));
+            return lodash_1.default.sum(memories.map(mem => Math.pow(Math.E, (-decayRate *
+                (this.__age -
+                    mem.time)))));
         };
-        for (const member in this.fameList)
+        // tslint:disable-next-line:forin
+        for (const member in this.fameList) {
             delete this.fameList[member];
+        }
         this.settlements.map(st => {
             this.fameList[st.id] = frecensy(st.memories);
         });
@@ -151,7 +158,8 @@ class SystemController {
     createConversation(source, dest, type) {
         this.conversations.push(new Conversation_1.default(type, source, dest, this));
     }
-    addSettlement(opts) {
+    addSettlement(opts, hash) {
+        console.log(hash);
         // sort options
         const options = {
             perf: 0.5,
@@ -165,28 +173,20 @@ class SystemController {
         };
         // tslint:disable-next-line:forin
         for (const trait in options) {
-            opts.map((cat, i) => {
-                // @ts-ignore
-                const catInfo = sort_1.default[SettlementCatEnum[i]];
-                options[trait] += catInfo[cat].traits[trait];
-            });
-            const t = options[trait];
-            if (trait !== 'nrg' && trait !== 'res') {
-                options[trait] =
-                    t > 0.9
-                        ? 0.9
-                        : t < 0.1
-                            ? 0.1
-                            : t;
+        }
+        if (!hash) {
+            hash = lodash_1.default.random(4097, 65535, false).toString(16);
+        }
+        let thisCulture = null;
+        lodash_1.default.shuffle(this.cultures).map(c => {
+            if (!thisCulture &&
+                lodash_1.default.random(true) > 0.2) {
+                thisCulture = c;
             }
-        }
-        let foundHash = false;
-        let hash = '05';
-        while (!foundHash) {
-            hash = lodash_1.default.random(1, 250, false).toString(16);
-            foundHash = !lodash_1.default.includes(this.settlements.map(c => c.id), hash);
-        }
-        const thisSet = new settlement_1.default(this.vor.getFarCell(), hash, this, ["Green", "Orange", "Purple"][lodash_1.default.random(0, 2, false)], options);
+        });
+        if (!thisCulture)
+            thisCulture = new Culture_1.default();
+        const thisSet = new settlement_1.default(this.vor.getFarCell(), hash, this, thisCulture, options);
         this.settlements.push(thisSet);
         this._dirtySettlements = true;
         this.updateRealms();
@@ -213,9 +213,15 @@ class SystemController {
         this._dirtyRealms = true;
     }
     draw() {
+        console.log(this.age);
+        const st = new Date().getMilliseconds();
         const dObj = {
             conversations: this.conversations.map(c => {
-                return { x: c.position[0], y: c.position[1], c: c.type };
+                return {
+                    x: c.position[0],
+                    y: c.position[1],
+                    c: c.type
+                };
             })
         };
         if (this._dirtyRoads) {
@@ -223,24 +229,27 @@ class SystemController {
                 path: r.path(),
                 state: r.use
             }));
-            this._dirtyRoads = false;
+            this._dirtyRoads = true;
         }
+        this._dirtyRoads = true;
+        this._dirtyRealms = true;
+        this._dirtySettlements = true;
         if (this._dirtySettlements) {
             dObj.settlements = this.settlements.map(s => {
                 return {
                     x: s.cell.x,
                     y: s.cell.y,
                     id: s.id,
-                    colour: s.community
+                    colour: s.community.colour
                 };
             });
-            this._dirtySettlements = false;
+            this._dirtySettlements = true;
         }
         if (this._dirtyRealms) {
             dObj.realms = this.vor.cells.map(c => {
                 return {
                     pgon: c.pgon,
-                    colour: c.leadCommunity
+                    colour: c.leadCommunity.colour
                 };
             });
             this._dirtyRealms = false;
@@ -249,7 +258,9 @@ class SystemController {
     }
     __tick() {
         // tslint:disable-next-line:no-this-assignment
+        const st = new Date().getMilliseconds();
         const that = this;
+        console.log(this.time);
         if (that.time === 239) {
             that.__newDay();
         }
@@ -260,13 +271,27 @@ class SystemController {
         if (that.settlements) {
             that.settlements.map(s => s.update());
         }
+        console.log(`stlmnt updated`);
         if (that.roads) {
             lodash_1.default.sampleSize(that.roads, lodash_1.default.min([that.roads.length, 30])).map(r => r.update());
         }
+        console.log(`rds updated`);
         if (that._hasVis) {
             const s = that.visualiser;
             // @ts-ignore
             that.visualiser.emit('draw', that.draw());
+        }
+        console.log(`vis updated`);
+        let f = (t) => {
+            return () => t.__tick();
+        };
+        const fn = new Date().getMilliseconds();
+        if (fn - st > 130) {
+            f(that);
+        }
+        else {
+            console.log(`fTime: ${fn - st}`);
+            setTimeout(f(that), 130 - (fn - st));
         }
     }
     __newDay() {

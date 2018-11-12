@@ -23,7 +23,7 @@ export default class Road {
             cell.type = cell.type === 0 ? 1 : cell.type;
             if ( cell.occupant === null ) cell.occupant = [ this ]; else if ( cell.occupant instanceof Array ) cell.occupant.push( this );
         } )
-        this.segmentCount = _.floor( this.length / 4 );
+        this.segmentCount = _.floor( this.length / 1 );
         this.__path = [];
         const [ ix,iy ] = [
             d3P.interpolateBasis( this.stops.map( c => c.x ) ),

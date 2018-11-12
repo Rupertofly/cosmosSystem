@@ -1,17 +1,18 @@
 import * as d3P from 'd3-polygon';
 import { isUndefined } from 'util';
+import Culture from '../Culture';
 import Road from '../Road'
 import Settlement from '../settlement';
-import SystemController, { Cultures } from '../SystemController';
+import SystemController from '../SystemController';
 
 export default class Conversation {
-    public speed = 4;
+    public speed = 1;
     public position: [number, number];
     public path: Array<[number, number]>;
     public road: Road;
     private __index = 0;
     constructor(
-        public type: Cultures,
+        public type: Culture,
         public source: Settlement,
         public dest: Settlement,
         public system: SystemController
